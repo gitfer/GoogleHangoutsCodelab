@@ -86,6 +86,10 @@ function playSound() {
   doctorSound.play();
 }
 
+function onReadyClicked() {
+  gapi.hangout.data.setValue(gapi.hangout.getParticipantId() +
+      'ready', '' + document.getElementById('ready').checked);
+}
 function onMedicalClicked() {
   playSound();
 }
