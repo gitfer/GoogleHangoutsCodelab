@@ -81,18 +81,51 @@ function createSoundResources() {
   doctorSound = gapi.hangout.av.effects.createAudioResource(
       'https://hangouts-codelab.appspot.com/static/codelab/sounds/doctor.wav');
 }
-
-function onMedicalClicked() {
-  playSound();
-}
-
 // Play a noise-cancelled sound throught the plugin
 function playSound() {
   doctorSound.play();
 }
 
+function onMedicalClicked() {
+  playSound();
+}
 function onBeTheCaptainClicked() {
   gapi.hangout.data.setValue('captain', gapi.hangout.getParticipantId());
+}
+// Slider functions
+function onWarpMouseDown(val) {
+  gapi.hangout.data.setValue('dragging', gapi.hangout.getParticipantId());
+}
+function onWarpMouseUp(val) {
+  // Remove the drag owner, and set the warp factor to the current value
+  gapi.hangout.data.clearValue('dragging');
+}
+function onMessageReceieved(event) {
+  try {
+    var val = JSON.parse(event.message);
+
+    if (gapi.hangout.data.getValue('dragging') !=
+        gapi.hangout.getParticipantId() ||
+            !gapi.hangout.data.getValue('dragging'))
+    {
+      setWarpFactor(val[1]);
+    }
+  } catch (e) {
+    console.log(e.stack);
+  }
+}
+function onWarpMouseMoved(val) {
+  // Called when warp slider moves
+  gapi.hangout.data.sendMessage(JSON.stringify(['warp', val]));
+
+  // Note that you will NOT get the message sent back to you,
+  // so you need to update your own UI as well
+  if (gapi.hangout.data.getValue('dragging') ==
+      gapi.hangout.getParticipantId() ||
+          !gapi.hangout.data.getValue('dragging'))
+  {
+    setWarpFactor(val);
+  }
 }
 
 // A variable for your visual overlays
@@ -168,31 +201,76 @@ function createTextOverlay(string) {
 /** Any code that will be executed on startup goes here! */
 function init() {
   gapi.hangout.data.onStateChanged.add(onStateChanged);
+  gapi.hangout.data.onMessageReceived.add(onMessageReceieved);
   createOverlays();
   createSoundResources();
   onStateChanged();
   console.log('App started.');
 }
 
+function updateReadiness() {
+  var participants = gapi.hangout.getEnabledParticipants();
+  var state = gapi.hangout.data.getState();
+
+  var readyCount = 0;
+
+  // Update screen
+  for (index in participants) {
+    var party = participants[index];
+    var isReady = state[party.id + 'ready'] == 'true';
+
+    if (isReady ) {
+      // Avoid flicker
+      if (gapi.hangout.av.getAvatar(party.id) == null) {
+        gapi.hangout.av.setAvatar(party.id,
+            'https://hangouts-codelab.appspot.com/static/codelab/graphics/checkbox.png');
+      }
+    }
+    else
+    {
+      gapi.hangout.av.clearAvatar(party.id);
+    }
+  }
+  
+  if (gapi.hangout.data.getValue('captain') == gapi.hangout.getParticipantId()) 
+  {
+	  if (readyCount == gapi.hangout.getEnabledParticipants().length)
+	  {
+		  gapi.hangout.data.setValue('engaged', 'true');
+	  }
+  }
+}
+
 /** Base onStateChanged. */
 function onStateChanged(event) {
   try {
-    var ourCaptain = gapi.hangout.getParticipantById(gapi.hangout.data.getValue('captain'));
+	  updateReadiness();
 
-    if (ourCaptain) {
-      document.getElementById('captain_photo').src = ourCaptain.person.image.url;
-    } else {
-      document.getElementById('captain_photo').src =
-          'https://hangouts-codelab.appspot.com/static/codelab/graphics/photo.jpg';
-    }
-  var captain = gapi.hangout.data.getValue('captain');
-  var isACaptain = gapi.hangout.getParticipantById(captain);
-  var iamcaptain = gapi.hangout.getParticipantId() == captain;
+	  if (gapi.hangout.data.getState().engaged == 'true'  && !initialized) {
+		  initStarfield();
+	  }
 
-  overlays['captain-face'].setVisible(iamcaptain);
-  overlays['captain-chin'].setVisible(iamcaptain);
+	  // Update de UI
+	  $('#ready').prop('checked',
+	  gapi.hangout.data.getValue(gapi.hangout.getParticipantId() +
+	  'ready') == 'true');
 
-  overlays['expendable'].setVisible(!iamcaptain && isACaptain);
+	  var ourCaptain = gapi.hangout.getParticipantById(gapi.hangout.data.getValue('captain'));
+
+	  if (ourCaptain) {
+		  document.getElementById('captain_photo').src = ourCaptain.person.image.url;
+		  } else {
+		  document.getElementById('captain_photo').src =
+		  'https://hangouts-codelab.appspot.com/static/codelab/graphics/photo.jpg';
+	  }
+	  var captain = gapi.hangout.data.getValue('captain');
+	  var isACaptain = gapi.hangout.getParticipantById(captain);
+	  var iamcaptain = gapi.hangout.getParticipantId() == captain;
+
+	  overlays['captain-face'].setVisible(iamcaptain);
+	  overlays['captain-chin'].setVisible(iamcaptain);
+
+	  overlays['expendable'].setVisible(!iamcaptain && isACaptain);
 
   } catch (e) {
     console.log(e.stack);
