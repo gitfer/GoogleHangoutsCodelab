@@ -72,6 +72,24 @@
 
 <!-- CODELAB!  ALL YOUR CODE GOES BELOW THIS POINT! -->
 <script>
+	
+// The sound you can play through the plugin
+var doctorSound;
+
+/** Allocates a sound resource, assigns it to a global variable.*/
+function createSoundResources() {
+  doctorSound = gapi.hangout.av.effects.createAudioResource(
+      'https://hangouts-codelab.appspot.com/static/codelab/sounds/doctor.wav');
+}
+
+function onMedicalClicked() {
+  playSound();
+}
+
+// Play a noise-cancelled sound throught the plugin
+function playSound() {
+  doctorSound.play();
+}
 
 function onBeTheCaptainClicked() {
   gapi.hangout.data.setValue('captain', gapi.hangout.getParticipantId());
@@ -151,6 +169,7 @@ function createTextOverlay(string) {
 function init() {
   gapi.hangout.data.onStateChanged.add(onStateChanged);
   createOverlays();
+  createSoundResources();
   onStateChanged();
   console.log('App started.');
 }
