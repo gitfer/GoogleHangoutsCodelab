@@ -73,6 +73,38 @@
 <!-- CODELAB!  ALL YOUR CODE GOES BELOW THIS POINT! -->
 <script>
 	
+function verifyToken() {
+	$.getJSON(
+	'https://www.googleapis.com/oauth2/v1/tokeninfo',
+	{access_token: generateToken()},
+	function(data) { 
+		document.getElementById('email').innerHTML = '<b>' + data.email + '<b/>'
+		console.log(data);
+			});
+}
+	
+/** Reads parameters off the iframe's URI
+@param {String} paramName the name of the parameter.
+@return {String} value of parameter.
+*/
+ function getParameter(paramName) {
+	 var searchString = window.location.search.substring(1);
+	 var i, val, params = searchString.split('&');
+
+	 for (i = 0; i < params.length; i++) {
+		 val = params[i].split('=');
+		 if (val[0] == paramName) {
+			 return unescape(val[1]);
+		 }
+	 }
+	 return null;
+ }
+
+// Retrieves the token
+function generateToken() {
+  return getParameter('token');
+}
+
 // The sound you can play through the plugin
 var doctorSound;
 
@@ -84,6 +116,18 @@ function createSoundResources() {
 // Play a noise-cancelled sound throught the plugin
 function playSound() {
   doctorSound.play();
+}
+
+function onFaceMotionChanged(event) {
+  try {
+    if (event.hasFace) {
+        setWarpTarget(event.mouthCenter.x * canvasWidth + canvasWidth / 2,
+              event.mouthCenter.y * canvasHeight + canvasHeight / 2);
+    }
+  } catch (e) {
+    console.log('ERROR: onFaceMotionChanged');
+    console.log(e.stack);
+  }
 }
 
 function onReadyClicked() {
@@ -206,9 +250,11 @@ function createTextOverlay(string) {
 function init() {
   gapi.hangout.data.onStateChanged.add(onStateChanged);
   gapi.hangout.data.onMessageReceived.add(onMessageReceieved);
+  gapi.hangout.av.effects.onFaceTrackingDataChanged.add(onFaceMotionChanged);
   createOverlays();
   createSoundResources();
   onStateChanged();
+  verifyToken();
   console.log('App started.');
 }
 
